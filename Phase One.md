@@ -160,7 +160,7 @@ Whether it's a busy holiday route or a regular weekday flight, the tool provides
 
 ## 4. Innovation or Improvement
 
-The Arina Airlines system transforms traditional airline revenue management by introducing predictive automation directly within the database layer. This isn't just about recording bookings—it's about creating a system that anticipates passenger behavior and responds intelligently.
+The Arina Airlines system transforms traditional airline revenue management by introducing predictive automation directly within the database layer. This isn't just about recording bookings it's about creating a system that anticipates passenger behavior and responds intelligently.
 
 ### Key Innovations:
 
@@ -178,10 +178,10 @@ Each flight's actual no-show data is fed back into the system, improving future 
 
 #### **Complete Database Integration**
 
-Everything runs inside Oracle—no external tools or manual processes needed. This reduces costs and increases reliability for small regional airlines.
+Everything runs inside Oracle no external tools or manual processes needed. This reduces costs and increases reliability for small regional airlines.
 
 #### **Actionable Business Intelligence**
 
-The system doesn't just report data—it triggers actions (price changes) and provides insights for strategic decisions about routes, scheduling, and capacity.
+The system doesn't just report data it triggers actions (price changes) and provides insights for strategic decisions about routes, scheduling, and capacity.
 
 The Arina Airlines Dynamic Pricing and No-Show Prediction System creates a smart, automated revenue management assistant that helps small airlines compete effectively, optimize every flight, and make data-driven decisions that directly impact profitability.
