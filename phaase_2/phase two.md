@@ -42,6 +42,7 @@ The process covers:
 - Automated, real-time decision support
 
 ## **Process Diagram (BPMN Swimlane Model)**
+<img width="1874" height="1886" alt="ER diargram" src="https://github.com/user-attachments/assets/81982c92-e4cf-49d4-8a5f-238747943eea" />
 
 
 ## Passenger Swimlane:
