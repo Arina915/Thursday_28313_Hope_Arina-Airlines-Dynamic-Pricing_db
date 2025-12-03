@@ -1,5 +1,5 @@
 # Phase Three
-# # Entity-Relationship Model:
+# Entity-Relationship Model:
 <img width="1659" height="1501" alt="Tables" src="https://github.com/user-attachments/assets/4e0dbbfc-a53a-409e-8d37-6f0757a32a36" />
 
 # Normalization Process: From Unnormalized to 3NF
