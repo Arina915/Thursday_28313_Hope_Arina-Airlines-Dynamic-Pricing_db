@@ -57,7 +57,7 @@ text
 └──────────────┘      └──────────────┘      └────────────────────┘
          ↓ FK                     ↓ FK
     (customer_id)            (flight_no)
-    ```
+ ```
 
 **Explanation:** Removed partial dependencies. Customer details moved to CUSTOMERS table. Price column removed (transitive dependency issue).
 
@@ -148,10 +148,11 @@ text
 │ - CHECK: loyalty_tier IN ('STANDARD',    │
 │   'SILVER','GOLD','PLATINUM')           │
 └─────────────────────────────────────────┘
-
+```
 **Additional 3NF Tables:**
 
 text
+```
 ┌─────────────────────────────────────────┐
 │         PRICE_RULES                     │
 ├─────────────────────────────────────────┤
@@ -186,9 +187,7 @@ text
 │ - DEFAULT: adjustment_date = SYSTIMESTAMP│
 │ - NOT NULL: reason                       │
 └─────────────────────────────────────────┘
-``
-
-
+```
 **3NF Justification:**
 
 1. **All tables have single primary keys**
