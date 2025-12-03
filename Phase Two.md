@@ -40,10 +40,72 @@ The process covers:
     
 - Automated, real-time decision support
 
+## **Process Diagram (BPMN Swimlane Model)**
 
 
+## Passenger Swimlane:
 
- ## **Main Components**
+1. **Start Event** → Passenger looks for flights to book
+    
+2. **Book Flight** → Passenger chooses a flight and pays
+    
+3. **Receive Ticket with Updated Price** → Passenger gets email with final ticket price (price might be different from when they booked)
+    
+4. **Check-In or No-Show** → Passenger either:
+    
+    - Goes to airport and takes flight
+        
+    - Doesn't show up (no-show)
+        
+5. **End Event** → Trip done or marked as no-show
+    
+
+##   System Swimlane:
+
+1. **Capture Booking Data** → System saves passenger booking information
+    
+2. **Trigger: Predict No-Shows** → Computer guesses how many people won't show up
+    
+3. **Decision Point: High No-Show Risk?** → Computer checks if many people might not come
+    
+    - **If Yes:** Lower prices to sell more tickets
+        
+    - **If No:** Keep normal prices
+        
+4. **Execute Price Adjustment** → Computer changes ticket prices automatically
+    
+5. **Log Changes** → Computer writes down what it changed
+    
+6. **Generate Revenue Report** → Computer makes report for manager to see
+    
+
+##  Management Swimlane:
+
+1. **Review Reports** → Manager looks at computer's reports
+    
+2. **Adjust Rules if Needed** → Manager changes computer rules if something is wrong
+    
+3. **End Event** → Manager is done checking
+
+## Main Components
+
+The process includes **six core stages** across three swimlanes:
+
+1. **Booking Initiation** – Passenger/agent interaction
+    
+2. **Data Capture** – System records booking details
+    
+3. **No-Show Prediction** – PL/SML logic evaluates risk
+    
+4. **Dynamic Pricing** – Prices adjusted based on load and prediction
+    
+5. **Audit & Reporting** – All changes logged and reported
+    
+6. **Management Review** – Oversight and rule tuning
+    
+
+
+ ## Main Components
 
 The process includes **six core stages** across three swimlanes:
 
