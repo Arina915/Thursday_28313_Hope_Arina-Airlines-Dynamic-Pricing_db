@@ -132,9 +132,9 @@ For all our storage areas:
 
 text
 ```
-AUTOEXTEND ON       
-NEXT 10M-20M       
-MAXSIZE 500M-2GB   
+AUTOEXTEND ON      -- Turn on auto-grow   
+NEXT 10M-20M       -- Add this much space each time
+MAXSIZE 500M-2GB    -- Stop growing at this limit
 ```
 ### Why This is Good:
 
@@ -160,10 +160,10 @@ Backup logs save a copy of every change made to the database. If something goes 
 
 sql
 ```
-SHUTDOWN IMMEDIATE;           
-STARTUP MOUNT;                
-ALTER DATABASE ARCHIVELOG;    
-ALTER DATABASE OPEN;          
+SHUTDOWN IMMEDIATE;            -- Stop the database        
+STARTUP MOUNT;                 -- Start in setup mode
+ALTER DATABASE ARCHIVELOG;     -- Turn on backup logs
+ALTER DATABASE OPEN;           -- Start normally
 ```
 **Step 2: Tell Oracle Where to Save Logs**
 
