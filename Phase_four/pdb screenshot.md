@@ -11,9 +11,9 @@
 ![3](https://github.com/user-attachments/assets/32cb2c50-0aef-4456-ae52-504bf92bd5d5)
 
 ## Configuration
-### Tablespace for Data Already exists
+### Tablespace for Data 
 
-![4 it already exist](https://github.com/user-attachments/assets/937545c9-8101-41de-bcae-ce52cb010d2c)
+<img width="1422" height="266" alt="image" src="https://github.com/user-attachments/assets/8604a82f-7810-4e95-a52c-c70587547693" />
 
 ### Tablespace for Index
 
