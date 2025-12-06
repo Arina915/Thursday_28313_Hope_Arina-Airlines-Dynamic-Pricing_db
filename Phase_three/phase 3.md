@@ -1,6 +1,7 @@
 # Phase Three
 # Entity-Relationship Model:
-<img width="1659" height="1501" alt="Tables" src="https://github.com/user-attachments/assets/4e0dbbfc-a53a-409e-8d37-6f0757a32a36" />
+<img width="1544" height="1272" alt="errdi" src="https://github.com/user-attachments/assets/16e13ed8-51f4-455b-8039-1b5e466d822a" />
+
 
 # Normalization Process: From Unnormalized to 3NF
 
@@ -236,16 +237,7 @@ text
 |scheduled_time|TIMESTAMP|NOT NULL|Planned departure time|
 |estimated_duration|NUMBER|NOT NULL|Flight duration in minutes|
 
-### Table 4: DEPARTURES
-
-|Column|Data Type|Constraints|Description|
-|---|---|---|---|
-|flight_no|VARCHAR2(10)|PRIMARY KEY, FOREIGN KEY|References FLIGHT_SCHEDULE(flight_no)|
-|departure_time|TIMESTAMP|NOT NULL|Actual departure time|
-|status|VARCHAR2(20)|CHECK(status IN ('SCHEDULED','BOARDING','DEPARTED','DELAYED','CANCELLED'))|Current flight status|
-|actual_departure|TIMESTAMP|NULL|When flight actually departed|
-
-### Table 5: CUSTOMERS
+### Table 4: CUSTOMERS
 
 |Column|Data Type|Constraints|Description|
 |---|---|---|---|
@@ -256,7 +248,7 @@ text
 |email|VARCHAR2(100)|UNIQUE, NOT NULL|Customer email|
 |phone|VARCHAR2(20)|NOT NULL|Contact number|
 
-### Table 6: BOOKINGS
+### Table 5: BOOKINGS
 
 |Column|Data Type|Constraints|Description|
 |---|---|---|---|
@@ -267,7 +259,7 @@ text
 |booking_date|DATE|NOT NULL, DEFAULT SYSDATE|When booking was made|
 |status|VARCHAR2(20)|CHECK(status IN ('CONFIRMED','CANCELLED','CHECKED_IN','NO_SHOW'))|Booking status|
 
-### Table 7: NO_SHOW_FORECAST
+### Table 6: NO_SHOW_FORECAST
 
 |Column|Data Type|Constraints|Description|
 |---|---|---|---|
@@ -277,7 +269,7 @@ text
 |predicted_noshows|NUMBER|NOT NULL, CHECK(predicted_noshows >= 0)|Number of expected no-shows|
 |confidence_score|NUMBER|CHECK(confidence_score >= 0 AND confidence_score <= 1)|Prediction confidence (0-1)|
 
-### Table 8: PRICE_RULES
+### Table 7: PRICE_RULES
 
 |Column|Data Type|Constraints|Description|
 |---|---|---|---|
@@ -289,7 +281,7 @@ text
 |effective_from|DATE|NOT NULL|Rule start date|
 |effective_to|DATE|NULL|Rule end date (NULL = active)|
 
-### Table 9: PRICE_ADJUSTMENTS
+### Table 8: PRICE_ADJUSTMENTS
 
 |Column|Data Type|Constraints|Description|
 |---|---|---|---|
