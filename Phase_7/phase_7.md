@@ -1,5 +1,30 @@
 # Phase VII: Advanced Programming & Auditing
 ----
+## Executive Summary
+
+Phase VII introduced advanced business rule enforcement, auditing mechanisms, and DML restriction logic.  
+The system now:
+
+- Blocks all INSERT/UPDATE/DELETE operations on **weekdays**
+- Blocks all DML operations on **public holidays (Dec 2025)**
+- Maintains a complete **audit trail**
+- Logs user details for every attempt
+- Successfully passed all **6 required testing criteria**
+
+All components required for this phase have been implemented, validated, and documented.
+
+---
+
+# Business Rule Implementation
+
+
+### Critical Rule
+
+DML operations (INSERT, UPDATE, DELETE) are **NOT ALLOWED**:
+
+- On **WEEKDAYS (Mon–Fri)**
+- On **PUBLIC HOLIDAYS (Dec 2025)**
+
 # Testing Requirements Verification
 ## Requirement 1: Trigger blocks INSERT on weekday (DENIED)
 
@@ -114,7 +139,7 @@ BEGIN
             DBMS_OUTPUT.PUT_LINE('- Expected: INSERT should be ALLOWED');
             DBMS_OUTPUT.PUT_LINE('');
             DBMS_OUTPUT.PUT_LINE('---');
-            DBMS_OUTPUT.PUT_LINE('✅ WEEKEND TEST PASSED:');
+            DBMS_OUTPUT.PUT_LINE(' WEEKEND TEST PASSED:');
             DBMS_OUTPUT.PUT_LINE('- Triggers would allow INSERT on ' || v_day_name || 
                                ' when it is not a holiday');
     END;
