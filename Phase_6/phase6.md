@@ -1420,6 +1420,7 @@ SELECT * FROM price_adjustments ORDER BY adjustment_id;
 ![package](https://github.com/user-attachments/assets/b4a50e56-2bf9-41e2-9816-d42f5bc89db0)
 
 ## DYNAMIC PRICING WITH EXCEPTION HANDLING
+The apply_dynamic_pricing procedure updates the ticket price for a specific flight and fare class, ensuring the new price stays within allowed limits. It calculates the flight’s load factor, logs the adjustment, updates future bookings, and handles errors using both predefined and custom exceptions, including rollback and recovery, to ensure safe and consistent pricing changes.
 ```
 CREATE OR REPLACE PROCEDURE apply_dynamic_pricing(
     p_flight_id     IN VARCHAR2,
@@ -1569,3 +1570,56 @@ END apply_dynamic_pricing;
 ```
 ![error](https://github.com/user-attachments/assets/c98f78c3-acbf-4575-b431-7a3915fd2008)
 
+## **conclusion**
+**Phase VI is successfully completed.** The Arina Airlines System now has:
+
+### **Complete Working System:**
+
+- **5 Working Procedures** for bookings and pricing
+    
+- **5 Special Functions** for checking and calculating
+    
+- **Smart Data Processing** that's fast and efficient
+    
+- **Useful Reports** with ranking and analytics
+    
+- **3 Organized Packages** keeping code clean
+    
+- **Full Error Protection** that keeps system running
+    
+
+### **Everything Tested:**
+
+- **Visual Proof:** Screenshots show everything working
+    
+- **Parameter Testing:** All inputs/outputs checked
+    
+- **Function Testing:** Calculation, validation, lookup all work
+    
+- **Cursor Testing:** Data processing methods verified
+    
+- **Window Functions:** Analytical tools implemented
+    
+- **Package Testing:** Complete package system working
+    
+
+###**Ready for Airline Use:**
+
+- **Professional Errors:** Clear messages with recovery options
+    
+- **Fast Performance:** Optimized for quick operations
+    
+- **Ready to Grow:** Can handle more flights and customers
+    
+- **Easy to Update:** Well-organized code structure
+    
+
+###**Value for the Airline:**
+
+- **Automatic Pricing:** Less manual price setting work
+    
+- **Smart Decisions:** Better pricing based on real demand
+    
+- **Reliable System:** Stable operations with strong checks
+    
+- **Better Planning:** Good data for business decisions
