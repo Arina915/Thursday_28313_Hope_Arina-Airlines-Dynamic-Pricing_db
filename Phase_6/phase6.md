@@ -1024,7 +1024,7 @@ ORDER BY estimated_profit DESC;
 ```
 ![FUCTION 5](https://github.com/user-attachments/assets/70bfa015-5231-495b-a917-e9cdfceae57f)
 
-**.`Explicit cursors for multi-row processing`**
+## **`Explicit cursors for multi-row processing`**
 This PL/SQL block uses a cursor to select flights with more than 5 confirmed bookings and displays the flight ID along with the number of bookings.
 It collects the results in a table and outputs them using DBMS_OUTPUT.
 ```
@@ -1069,7 +1069,7 @@ END;
 ```
 ![Explicit cursors for multi-row processing](https://github.com/user-attachments/assets/7f272109-23b3-4ea8-acdd-bc9987f99d7c)
 
-**.`Bulk operations for optimization`**
+## **`Bulk operations for optimization`**
 This PL/SQL block fetches the customer_ids of up to 5 customers who have had a "NO SHOW" booking.
 It collects these IDs into a table and then outputs each customer's ID using DBMS_OUTPUT.
 ```DECLARE
@@ -1120,18 +1120,452 @@ Assigns a rank to each booking within a customer, ordered by `ticket_price` in d
 1. **DENSE_RANK()**:
  Similar to `RANK()`, but there are **no gaps** in the ranking. If two bookings have the same price, they get the same rank, but the next rank will be consecutive (no skipped ranks).
     
-2. **LAG(ticket_price, 1, 0)**:
+3. **LAG(ticket_price, 1, 0)**:
 Retrieves the `ticket_price` of the previous booking for the same customer, ordered by `booking_date`. If there is no previous booking (e.g., the first booking), it returns `0`.
 
-3. **LEAD(ticket_price, 1, 0)**:
+4. **LEAD(ticket_price, 1, 0)**:
 Retrieves the `ticket_price` of the next booking for the same customer, ordered by `booking_date`. If there is no next booking (e.g., the last booking), it returns `0`.To rank bookings with gaps for ties.
 
-**DENSE_RANK():**
-What it does: Similar to RANK(), but there are no gaps in the ranking. If two bookings have the same price, they get the same rank, but the next rank will be consecutive (no skipped ranks).
+## Package Performance Benefits
+Oracle packages speed up databases by remembering queries, storing data in memory, and organizing code efficiently making repeated operations faster and more reliable.
+```
+-- First, create the PRICE_ADJUSTMENTS table if not exists
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE price_adjustments';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN
+            RAISE;
+        END IF;
+END;
+/
 
-**LAG(ticket_price, 1, 0):**
-What it does: Retrieves the ticket_price of the previous booking for the same customer, ordered by booking_date. If there is no previous booking (e.g., the first booking), it returns 0.
+CREATE TABLE price_adjustments (
+    adjustment_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    flight_id VARCHAR2(10),
+    fare_class VARCHAR2(20),
+    old_price NUMBER(10,2),
+    new_price NUMBER(10,2),
+    price_difference NUMBER(10,2),
+    adjustment_reason VARCHAR2(200),
+    adjusted_by VARCHAR2(50) DEFAULT 'SYSTEM',
+    adjusted_date TIMESTAMP DEFAULT SYSTIMESTAMP
+);
 
-**LEAD(ticket_price, 1, 0):**
-What it does: Retrieves the ticket_price of the next booking for the same customer, ordered by booking_date. If there is no next booking (e.g., the last booking), it returns 0.
+-- Create a package for dynamic pricing
+CREATE OR REPLACE PACKAGE dynamic_pricing_pkg AS
+    -- 1. ENCAPSULATION: Hide implementation details
+    PROCEDURE update_dynamic_pricing(
+        p_flight_id IN VARCHAR2,
+        p_fare_class IN VARCHAR2,
+        p_new_price IN NUMBER,
+        p_adjustment_reason IN VARCHAR2,
+        p_adjusted_by IN VARCHAR2 DEFAULT 'SYSTEM'
+    );
+    
+    -- Additional procedures for better modularity
+    FUNCTION get_average_price(
+        p_flight_id IN VARCHAR2,
+        p_fare_class IN VARCHAR2
+    ) RETURN NUMBER;
+    
+    PROCEDURE log_adjustment(
+        p_flight_id IN VARCHAR2,
+        p_fare_class IN VARCHAR2,
+        p_old_price IN NUMBER,
+        p_new_price IN NUMBER,
+        p_reason IN VARCHAR2,
+        p_adjusted_by IN VARCHAR2
+    );
+    
+    -- Public constants
+    MIN_PRICE CONSTANT NUMBER := 0;
+    MAX_PRICE CONSTANT NUMBER := 9999.99;
+    
+    -- Public exceptions
+    invalid_price EXCEPTION;
+    invalid_flight_id EXCEPTION;
+    PRAGMA EXCEPTION_INIT(invalid_price, -20001);
+    PRAGMA EXCEPTION_INIT(invalid_flight_id, -20002);
+    
+END dynamic_pricing_pkg;
+/
+
+CREATE OR REPLACE PACKAGE BODY dynamic_pricing_pkg AS
+    
+    -- 2. SHARED MEMORY: Package-level cursor for reuse
+    CURSOR c_avg_price(p_flight_id VARCHAR2, p_fare_class VARCHAR2) IS
+        SELECT NVL(AVG(ticket_price), 0) as avg_price
+        FROM bookings
+        WHERE flight_id = p_flight_id
+          AND fare_class = p_fare_class
+          AND booking_status = 'CONFIRMED';
+    
+    -- 3. REDUCED SQL PARSING: Static SQL in package initialization
+    TYPE price_cache_type IS TABLE OF NUMBER INDEX BY VARCHAR2(50);
+    g_price_cache price_cache_type; -- Shared across sessions in same instance
+    
+    -- Initialize package (runs once per session)
+    PROCEDURE initialize_cache IS
+    BEGIN
+        -- Could pre-load cache here for frequently accessed flights
+        NULL;
+    END initialize_cache;
+    
+    -- Helper function with reduced parsing (reusable)
+    FUNCTION calculate_price_difference(
+        p_old_price IN NUMBER,
+        p_new_price IN NUMBER
+    ) RETURN NUMBER IS
+    BEGIN
+        RETURN p_new_price - p_old_price;
+    END calculate_price_difference;
+    
+    -- Public function to get average price
+    FUNCTION get_average_price(
+        p_flight_id IN VARCHAR2,
+        p_fare_class IN VARCHAR2
+    ) RETURN NUMBER IS
+        v_avg_price NUMBER;
+        v_cache_key VARCHAR2(50);
+    BEGIN
+        v_cache_key := p_flight_id || ':' || p_fare_class;
+        
+        -- Check cache first (SHARED MEMORY benefit)
+        IF g_price_cache.EXISTS(v_cache_key) THEN
+            RETURN g_price_cache(v_cache_key);
+        END IF;
+        
+        -- Use reusable cursor (REDUCED PARSING benefit)
+        OPEN c_avg_price(p_flight_id, p_fare_class);
+        FETCH c_avg_price INTO v_avg_price;
+        CLOSE c_avg_price;
+        
+        -- Cache the result
+        g_price_cache(v_cache_key) := NVL(v_avg_price, 0);
+        
+        RETURN v_avg_price;
+    END get_average_price;
+    
+    -- Procedure to log adjustments
+    PROCEDURE log_adjustment(
+        p_flight_id IN VARCHAR2,
+        p_fare_class IN VARCHAR2,
+        p_old_price IN NUMBER,
+        p_new_price IN NUMBER,
+        p_reason IN VARCHAR2,
+        p_adjusted_by IN VARCHAR2
+    ) IS
+        v_price_diff NUMBER;
+    BEGIN
+        v_price_diff := calculate_price_difference(p_old_price, p_new_price);
+        
+        INSERT INTO price_adjustments (
+            flight_id, fare_class, old_price, new_price,
+            price_difference, adjustment_reason, adjusted_by
+        ) VALUES (
+            p_flight_id, p_fare_class, p_old_price, p_new_price,
+            v_price_diff, p_reason, p_adjusted_by
+        );
+    END log_adjustment;
+    
+    -- Main procedure
+    PROCEDURE update_dynamic_pricing(
+        p_flight_id IN VARCHAR2,
+        p_fare_class IN VARCHAR2,
+        p_new_price IN NUMBER,
+        p_adjustment_reason IN VARCHAR2,
+        p_adjusted_by IN VARCHAR2 DEFAULT 'SYSTEM'
+    ) IS
+        v_old_price NUMBER;
+        v_rows_updated NUMBER;
+    BEGIN
+        -- Input validation with encapsulated logic
+        IF p_flight_id IS NULL OR LENGTH(TRIM(p_flight_id)) = 0 THEN
+            RAISE invalid_flight_id;
+        END IF;
+        
+        IF p_new_price IS NULL OR p_new_price < MIN_PRICE OR p_new_price > MAX_PRICE THEN
+            RAISE invalid_price;
+        END IF;
+        
+        -- Get old price using package function (encapsulation)
+        v_old_price := get_average_price(p_flight_id, p_fare_class);
+        
+        -- Update bookings - single SQL execution
+        UPDATE bookings
+        SET ticket_price = p_new_price
+        WHERE flight_id = p_flight_id
+          AND fare_class = p_fare_class
+          AND booking_status = 'CONFIRMED';
+        
+        v_rows_updated := SQL%ROWCOUNT;
+        
+        -- Log the adjustment using package procedure
+        log_adjustment(
+            p_flight_id, p_fare_class, v_old_price, p_new_price,
+            p_adjustment_reason, p_adjusted_by
+        );
+        
+        COMMIT;
+        
+        DBMS_OUTPUT.PUT_LINE('Price updated successfully for ' || 
+                             p_flight_id || ' - ' || p_fare_class ||
+                             '. Old price: ' || v_old_price ||
+                             ', New price: ' || p_new_price ||
+                             ', Rows updated: ' || v_rows_updated);
+        
+    EXCEPTION
+        WHEN invalid_flight_id THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Flight ID cannot be empty');
+        WHEN invalid_price THEN
+            RAISE_APPLICATION_ERROR(-20001, 
+                'Price must be between ' || MIN_PRICE || ' and ' || MAX_PRICE);
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;
+    END update_dynamic_pricing;
+    
+    -- Package initialization (runs once when package is first called)
+BEGIN
+    initialize_cache;
+    DBMS_OUTPUT.PUT_LINE('Dynamic Pricing Package initialized at ' || 
+                         TO_CHAR(SYSDATE, 'DD-MON-YYYY HH24:MI:SS'));
+END dynamic_pricing_pkg;
+/
+
+-- Enable DBMS_OUTPUT
+SET SERVEROUTPUT ON;
+
+-- Test the package implementation
+BEGIN
+    -- First, insert test data using single-letter fare codes
+    INSERT INTO bookings (flight_id, fare_class, ticket_price, booking_status, travel_date)
+    VALUES ('FL123', 'E', 250.00, 'CONFIRMED', SYSDATE + 30);
+    
+    INSERT INTO bookings (flight_id, fare_class, ticket_price, booking_status, travel_date)
+    VALUES ('FL123', 'B', 500.00, 'CONFIRMED', SYSDATE + 30);
+    
+    INSERT INTO bookings (flight_id, fare_class, ticket_price, booking_status, travel_date)
+    VALUES ('FL123', 'E', 260.00, 'CONFIRMED', SYSDATE + 31);
+    
+    COMMIT;
+    
+    DBMS_OUTPUT.PUT_LINE('Test data inserted successfully');
+END;
+/
+
+-- Now test the package procedures
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 1: Basic economy update (Package) ===');
+    dynamic_pricing_pkg.update_dynamic_pricing(
+        p_flight_id => 'FL123',
+        p_fare_class => 'E',
+        p_new_price => 299.99,
+        p_adjustment_reason => 'Seasonal price increase',
+        p_adjusted_by => 'ADMIN'
+    );
+END;
+/
+
+-- Check results
+SELECT * FROM price_adjustments;
+SELECT flight_id, fare_class, ticket_price, booking_status 
+FROM bookings 
+WHERE flight_id = 'FL123'
+ORDER BY travel_date;
+
+-- Test cache functionality (SHARED MEMORY benefit)
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== Testing Cache Performance ===');
+    DBMS_OUTPUT.PUT_LINE('First call (should compute): ' || 
+                         dynamic_pricing_pkg.get_average_price('FL123', 'E'));
+    DBMS_OUTPUT.PUT_LINE('Second call (should use cache): ' || 
+                         dynamic_pricing_pkg.get_average_price('FL123', 'E'));
+END;
+/
+
+-- Test other procedures
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 2: Business class update ===');
+    dynamic_pricing_pkg.update_dynamic_pricing(
+        p_flight_id => 'FL123',
+        p_fare_class => 'B',
+        p_new_price => 699.99,
+        p_adjustment_reason => 'Premium service upgrade',
+        p_adjusted_by => 'MANAGER'
+    );
+END;
+/
+
+-- Test error handling
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 3: Invalid price test ===');
+    dynamic_pricing_pkg.update_dynamic_pricing(
+        p_flight_id => 'FL123',
+        p_fare_class => 'E',
+        p_new_price => -100,
+        p_adjustment_reason => 'Test error'
+    );
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Expected error: ' || SQLERRM);
+END;
+/
+
+-- Show all adjustments
+SELECT * FROM price_adjustments ORDER BY adjustment_id;
+```
+
+![package](https://github.com/user-attachments/assets/b4a50e56-2bf9-41e2-9816-d42f5bc89db0)
+
+## DYNAMIC PRICING WITH EXCEPTION HANDLING
+```
+CREATE OR REPLACE PROCEDURE apply_dynamic_pricing(
+    p_flight_id     IN VARCHAR2,
+    p_fare_class    IN VARCHAR2,
+    p_new_price     IN NUMBER,
+    p_reason        IN VARCHAR2,
+    p_out_status    OUT VARCHAR2,
+    p_out_audit_id  OUT NUMBER
+) IS
+    v_old_price   NUMBER;
+    v_min_price   NUMBER;
+    v_max_price   NUMBER;
+    v_load_factor NUMBER;
+    v_audit_id    NUMBER;
+    
+BEGIN
+    -- Savepoint for manual recovery
+    SAVEPOINT before_price_change;
+
+    -------------------------------------
+    -- GET CURRENT PRICE (may raise NO_DATA_FOUND)
+    -------------------------------------
+    SELECT ticket_price INTO v_old_price
+    FROM bookings
+    WHERE flight_id = p_flight_id
+      AND fare_class = p_fare_class
+      AND booking_status = 'CONFIRMED'
+      AND ROWNUM = 1;
+
+    -------------------------------------
+    -- GET PRICE RULES (may raise NO_DATA_FOUND)
+    -------------------------------------
+    SELECT min_price, max_price
+    INTO v_min_price, v_max_price
+    FROM price_rules
+    WHERE fare_class = p_fare_class
+      AND is_active = 'Y';
+
+    -------------------------------------
+    -- CUSTOM EXCEPTION: PRICE OUTSIDE RANGE
+    -------------------------------------
+    IF p_new_price < v_min_price OR p_new_price > v_max_price THEN
+        RAISE airline_exceptions.price_range_exception;
+    END IF;
+
+    -------------------------------------
+    -- CALCULATE LOAD FACTOR
+    -------------------------------------
+    SELECT (COUNT(b.booking_id) * 100.0) / a.capacity
+    INTO v_load_factor
+    FROM flight_schedule f
+    JOIN aircraft a ON f.aircraft_id = a.registration_no
+    LEFT JOIN bookings b ON f.flight_id = b.flight_id
+         AND b.booking_status IN ('CONFIRMED', 'CHECKED-IN')
+    WHERE f.flight_id = p_flight_id;
+
+    -------------------------------------
+    -- INSERT PRICE ADJUSTMENT RECORD
+    -------------------------------------
+    INSERT INTO price_adjustments(
+        flight_no, fare_class, old_price, new_price,
+        adjustment_reason, load_factor, adjusted_by
+    ) VALUES(
+        p_flight_id, p_fare_class, v_old_price, p_new_price,
+        p_reason, v_load_factor, USER
+    )
+    RETURNING adjustment_id INTO v_audit_id;
+
+    -------------------------------------
+    -- UPDATE FUTURE BOOKINGS
+    -------------------------------------
+    UPDATE bookings
+    SET ticket_price = p_new_price
+    WHERE flight_id = p_flight_id
+      AND fare_class = p_fare_class
+      AND booking_status = 'CONFIRMED'
+      AND booking_date > SYSDATE - 1;
+
+    p_out_status    := 'SUCCESS';
+    p_out_audit_id  := v_audit_id;
+    COMMIT;
+
+
+-------------------------------------
+-- EXCEPTION HANDLING SECTION
+-------------------------------------
+EXCEPTION
+
+    ----------------------------------------
+    -- CUSTOM EXCEPTION HANDLED
+    ----------------------------------------
+    WHEN airline_exceptions.price_range_exception THEN
+        ROLLBACK TO before_price_change;
+        airline_exceptions.log_error(
+            'apply_dynamic_pricing', 
+            -20003,
+            'Price ' || p_new_price || 
+            ' outside allowed range [' || v_min_price || ' - ' || v_max_price || ']'
+        );
+        p_out_status := 'ERROR: Price out of allowed range';
+
+    ----------------------------------------
+    -- PREDEFINED EXCEPTION: NO DATA FOUND
+    ----------------------------------------
+    WHEN NO_DATA_FOUND THEN
+        ROLLBACK TO before_price_change;
+        airline_exceptions.log_error(
+            'apply_dynamic_pricing',
+            -20008,
+            'No valid bookings or price rules found for flight ' || p_flight_id
+        );
+        p_out_status := 'ERROR: Missing required data';
+
+    ----------------------------------------
+    -- PREDEFINED EXCEPTION: TOO MANY ROWS
+    ----------------------------------------
+    WHEN TOO_MANY_ROWS THEN
+        ROLLBACK TO before_price_change;
+        airline_exceptions.log_error(
+            'apply_dynamic_pricing',
+            -1422,
+            'Multiple active price rules for fare class ' || p_fare_class
+        );
+        p_out_status := 'ERROR: Duplicate price rules';
+
+    ----------------------------------------
+    -- GENERIC EXCEPTION (OTHERS)
+    ----------------------------------------
+    WHEN OTHERS THEN
+        ROLLBACK TO before_price_change;
+
+        -- RECOVERY: rollback the price adjustment if created
+        IF v_audit_id IS NOT NULL THEN
+            airline_exceptions.rollback_price_adjustment(v_audit_id);
+        END IF;
+
+        airline_exceptions.log_error(
+            'apply_dynamic_pricing',
+            SQLCODE,
+            SQLERRM
+        );
+
+        p_out_status := 'ERROR: ' || SQLERRM;
+
+END apply_dynamic_pricing;
+/
+```
+![error](https://github.com/user-attachments/assets/c98f78c3-acbf-4575-b431-7a3915fd2008)
 
