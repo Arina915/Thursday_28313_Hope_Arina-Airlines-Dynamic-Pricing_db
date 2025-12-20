@@ -1,0 +1,178 @@
+--1. Create the audit trigger
+
+CREATE OR REPLACE TRIGGER ADMIN_28313.PRICE_RULES_AUDIT_TRG
+AFTER UPDATE OF BASE_PRICE ON ADMIN_28313.PRICE_RULES
+FOR EACH ROW
+WHEN (OLD.BASE_PRICE != NEW.BASE_PRICE)
+BEGIN
+    INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT (
+        RULE_ID,
+        OLD_BASE_PRICE,
+        NEW_BASE_PRICE,
+        CHANGED_BY
+    ) VALUES (
+        :OLD.RULE_ID,
+        :OLD.BASE_PRICE,
+        :NEW.BASE_PRICE,
+        USER  -- Oracle built-in function that returns current username
+    );
+END;
+/
+
+-----test:
+
+-- Test 1: Check current price for a rule
+SELECT RULE_ID, RULE_NAME, BASE_PRICE 
+FROM ADMIN_28313.PRICE_RULES 
+WHERE RULE_ID = 1;
+
+-- Test 2: Update a price to trigger the audit
+UPDATE ADMIN_28313.PRICE_RULES 
+SET BASE_PRICE = 850
+WHERE RULE_ID = 1;
+
+COMMIT;
+
+-- Test 3: Check the audit log
+SELECT 
+    AUDIT_ID,
+    RULE_ID,
+    OLD_BASE_PRICE,
+    NEW_BASE_PRICE,
+    CHANGED_BY,
+    TO_CHAR(CHANGE_DATE, 'DD-MON-YYYY HH24:MI:SS') AS CHANGE_TIMESTAMP,
+    (NEW_BASE_PRICE - OLD_BASE_PRICE) AS PRICE_CHANGE,
+    ROUND(((NEW_BASE_PRICE - OLD_BASE_PRICE) / OLD_BASE_PRICE) * 100, 2) AS PERCENT_CHANGE
+FROM ADMIN_28313.PRICE_RULES_AUDIT
+ORDER BY CHANGE_DATE DESC, AUDIT_ID DESC;
+
+-- Test 4: Update another rule
+UPDATE ADMIN_28313.PRICE_RULES 
+SET BASE_PRICE = 600
+WHERE RULE_ID = 2;
+
+COMMIT;
+
+-- Test 5: See all audit entries
+SELECT * FROM ADMIN_28313.PRICE_RULES_AUDIT;
+
+--2: Comprehensive Audit Table (Tracks all column changes)
+-- 1. Create comprehensive audit table
+CREATE TABLE ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+    AUDIT_ID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RULE_ID NUMBER NOT NULL,
+    ACTION_TYPE VARCHAR2(10) NOT NULL, -- INSERT, UPDATE, DELETE
+    COLUMN_NAME VARCHAR2(30),
+    OLD_VALUE VARCHAR2(4000),
+    NEW_VALUE VARCHAR2(4000),
+    CHANGED_BY VARCHAR2(50) DEFAULT USER,
+    CHANGE_DATE TIMESTAMP DEFAULT SYSTIMESTAMP,
+    SESSION_ID NUMBER,
+    OS_USER VARCHAR2(100),
+    MODULE_NAME VARCHAR2(100)
+);
+
+-- 2. Create trigger for comprehensive auditing
+CREATE OR REPLACE TRIGGER ADMIN_28313.PRICE_RULES_AUDIT_COMP_TRG
+AFTER INSERT OR UPDATE OR DELETE ON ADMIN_28313.PRICE_RULES
+FOR EACH ROW
+DECLARE
+    v_action VARCHAR2(10);
+BEGIN
+    IF INSERTING THEN
+        v_action := 'INSERT';
+        
+        INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+            RULE_ID, ACTION_TYPE, COLUMN_NAME, NEW_VALUE, 
+            SESSION_ID, OS_USER, MODULE_NAME
+        ) VALUES (
+            :NEW.RULE_ID, v_action, 'ALL_COLUMNS', 
+            'New Rule Created: ' || :NEW.RULE_NAME,
+            SYS_CONTEXT('USERENV', 'SESSIONID'),
+            SYS_CONTEXT('USERENV', 'OS_USER'),
+            SYS_CONTEXT('USERENV', 'MODULE')
+        );
+        
+    ELSIF UPDATING THEN
+        v_action := 'UPDATE';
+        
+        -- Audit BASE_PRICE changes
+        IF (:OLD.BASE_PRICE != :NEW.BASE_PRICE OR 
+           (:OLD.BASE_PRICE IS NULL AND :NEW.BASE_PRICE IS NOT NULL) OR
+           (:OLD.BASE_PRICE IS NOT NULL AND :NEW.BASE_PRICE IS NULL)) THEN
+            INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+                RULE_ID, ACTION_TYPE, COLUMN_NAME, OLD_VALUE, NEW_VALUE,
+                SESSION_ID, OS_USER, MODULE_NAME
+            ) VALUES (
+                :OLD.RULE_ID, v_action, 'BASE_PRICE', 
+                TO_CHAR(:OLD.BASE_PRICE), TO_CHAR(:NEW.BASE_PRICE),
+                SYS_CONTEXT('USERENV', 'SESSIONID'),
+                SYS_CONTEXT('USERENV', 'OS_USER'),
+                SYS_CONTEXT('USERENV', 'MODULE')
+            );
+        END IF;
+        
+        -- Audit MIN_PRICE changes
+        IF (:OLD.MIN_PRICE != :NEW.MIN_PRICE OR 
+           (:OLD.MIN_PRICE IS NULL AND :NEW.MIN_PRICE IS NOT NULL) OR
+           (:OLD.MIN_PRICE IS NOT NULL AND :NEW.MIN_PRICE IS NULL)) THEN
+            INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+                RULE_ID, ACTION_TYPE, COLUMN_NAME, OLD_VALUE, NEW_VALUE,
+                SESSION_ID, OS_USER, MODULE_NAME
+            ) VALUES (
+                :OLD.RULE_ID, v_action, 'MIN_PRICE', 
+                TO_CHAR(:OLD.MIN_PRICE), TO_CHAR(:NEW.MIN_PRICE),
+                SYS_CONTEXT('USERENV', 'SESSIONID'),
+                SYS_CONTEXT('USERENV', 'OS_USER'),
+                SYS_CONTEXT('USERENV', 'MODULE')
+            );
+        END IF;
+        
+        -- Audit MAX_PRICE changes
+        IF (:OLD.MAX_PRICE != :NEW.MAX_PRICE OR 
+           (:OLD.MAX_PRICE IS NULL AND :NEW.MAX_PRICE IS NOT NULL) OR
+           (:OLD.MAX_PRICE IS NOT NULL AND :NEW.MAX_PRICE IS NULL)) THEN
+            INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+                RULE_ID, ACTION_TYPE, COLUMN_NAME, OLD_VALUE, NEW_VALUE,
+                SESSION_ID, OS_USER, MODULE_NAME
+            ) VALUES (
+                :OLD.RULE_ID, v_action, 'MAX_PRICE', 
+                TO_CHAR(:OLD.MAX_PRICE), TO_CHAR(:NEW.MAX_PRICE),
+                SYS_CONTEXT('USERENV', 'SESSIONID'),
+                SYS_CONTEXT('USERENV', 'OS_USER'),
+                SYS_CONTEXT('USERENV', 'MODULE')
+            );
+        END IF;
+        
+        -- Audit IS_ACTIVE changes
+        IF (:OLD.IS_ACTIVE != :NEW.IS_ACTIVE) THEN
+            INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+                RULE_ID, ACTION_TYPE, COLUMN_NAME, OLD_VALUE, NEW_VALUE,
+                SESSION_ID, OS_USER, MODULE_NAME
+            ) VALUES (
+                :OLD.RULE_ID, v_action, 'IS_ACTIVE', 
+                :OLD.IS_ACTIVE, :NEW.IS_ACTIVE,
+                SYS_CONTEXT('USERENV', 'SESSIONID'),
+                SYS_CONTEXT('USERENV', 'OS_USER'),
+                SYS_CONTEXT('USERENV', 'MODULE')
+            );
+        END IF;
+        
+    ELSIF DELETING THEN
+        v_action := 'DELETE';
+        
+        INSERT INTO ADMIN_28313.PRICE_RULES_AUDIT_COMPREHENSIVE (
+            RULE_ID, ACTION_TYPE, COLUMN_NAME, OLD_VALUE,
+            SESSION_ID, OS_USER, MODULE_NAME
+        ) VALUES (
+            :OLD.RULE_ID, v_action, 'ALL_COLUMNS', 
+            'Rule Deleted: ' || :OLD.RULE_NAME,
+            SYS_CONTEXT('USERENV', 'SESSIONID'),
+            SYS_CONTEXT('USERENV', 'OS_USER'),
+            SYS_CONTEXT('USERENV', 'MODULE')
+        );
+    END IF;
+END;
+/
+
+
