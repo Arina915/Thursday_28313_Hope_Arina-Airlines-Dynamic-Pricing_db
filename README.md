@@ -78,7 +78,7 @@ This system solves these challenges by providing automated, data-driven predicti
 1. **Set Up the Database Schema**
     
     sql
-    
+```    
 
 -- Connect to your Oracle database
 sqlplus airline_admin/password@orcl
@@ -91,21 +91,21 @@ sqlplus airline_admin/password@orcl
 
 -- Set up scheduler jobs
 @scripts/create_scheduler_jobs.sql
-
+```
 **Load Sample Data**
 
 sql
-
+```
 -- Insert sample flights, aircraft, and bookings
 @sample_data/insert_sample_data.sql
-
+```
 **Test the System**
 
 sql
-
+```
 -- Run prediction and pricing for a specific flight
 EXEC revenue_engine.predict_and_adjust('AA245');
-
+```
 ---
 
 ## Project Structure
