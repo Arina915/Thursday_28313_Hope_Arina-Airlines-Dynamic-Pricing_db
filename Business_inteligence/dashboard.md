@@ -13,7 +13,7 @@ Provide airline management with a real-time overview of flight performance, no-s
 ### Layout Mockup
 
 text
-
+```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │               ARINA AIRLINES: REVENUE & PREDICTION DASHBOARD                │
 │                         Last Updated: 2025-12-07 10:15                       │
@@ -48,7 +48,7 @@ text
 │   └─────────────────────────┘         │   │                         │        │
 │                                       │   └─────────────────────────┘        │
 └───────────────────────────────────────┴───────────────────────────────────────┘
-
+```
 ### KPI Cards
 
 |KPI|Value|Trend|
@@ -85,12 +85,12 @@ Monitor dynamic pricing adjustments, load factors, and revenue performance acros
 ### Layout Mockup
 
 text
-
+```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                   PRICING & REVENUE MONITORING DASHBOARD                     │
-│                         Last Updated: 2025-12-07 10:15                       │
+│                   PRICING & REVENUE MONITORING DASHBOARD                                          │
+│                         Last Updated: 2025-12-07 10:15                                                                  │
 ├─────────────────┬─────────────────┬─────────────────┬─────────────────────────┤
-│                 │                 │                 │                         │
+│                               │                 │                 │                         │
 │  💺 AVG LOAD    │  🎫 AVG PRICE   │  📉 MAX PRICE   │   📈 REVENUE            │
 │  FACTOR         │  ADJUSTMENT     │  DROP           │   LIFT                  │
 │     78%         │     -5.2%       │      -22%       │   +8.3%                 │
@@ -118,7 +118,7 @@ text
 │   └─────────────────────────┘         │   └─────────────────────────┘        │
 │                                       │                                       │
 └───────────────────────────────────────┴───────────────────────────────────────┘
-
+```
 ### SQL Query for Pricing Dashboard
 
 sql
@@ -143,38 +143,38 @@ Track no-show predictions, accuracy over time, and factors influencing predictio
 ### Layout Mockup
 
 text
-
+```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     NO-SHOW PREDICTION ANALYTICS                            │
-│                         Last Updated: 2025-12-07 10:15                       │
-├─────────────────┬─────────────────┬─────────────────┬─────────────────────────┤
-│                 │                 │                 │                         │
-│  🔮 PREDICTED   │  ✅ ACTUAL      │  📊 ACCURACY    │   🧠 MODEL            |
-│  NO-SHOWS       │  NO-SHOWS       │  RATE           │   VERSION               │
-│     1,240       │     1,190       │     96%         │   v2.3                  │
-│  This Month     │  This Month     │  (Last 30 Days) │  (Updated Dec 1)        │
+│                     NO-SHOW PREDICTION ANALYTICS                                                              │
+│                         Last Updated: 2025-12-07 10:15                                                                 │
+├─────────────────┬─────────────────┬─────────────────┬─────────────────────────
+│                               │                               │                               │                                             │
+│  🔮 PREDICTED     │  ✅ ACTUAL         │  📊 ACCURACY       │   🧠 MODEL                       │
+│  NO-SHOWS         │  NO-SHOWS         │  RATE                       │   VERSION                          │
+│     1,240                 │     1,190                │     96%                      │   v2.3                                  │
+│  This Month           │  This Month          │  (Last 30 Days) │  (Updated Dec 1)                       │
 ├─────────────────┴─────────────────┴─────────────────┴─────────────────────────┤
-│                                                                               │
-│   📊 PREDICTION FACTORS WEIGHTING                                            │
-│   ┌───────────────────────────────────────────────────────────────┐          │
-│   │ Booking Lead Time      ████████████████████  35%             │          │
-│   │ Loyalty Level          ████████████████      28%             │          │
-│   │ Day of Week            ████████████          22%             │          │
-│   │ Holiday Proximity      ███████               15%             │          │
-│   └───────────────────────────────────────────────────────────────┘          │
-│                                                                               │
+│                                                                                                                                                │
+│   📊 PREDICTION FACTORS WEIGHTING                                                                               │
+│   ┌───────────────────────────────────────────────────────────────┐                       │
+│   │ Booking Lead Time      ████████████████████  35% │                       │
+│   │ Loyalty Level          ████████████████      28%                 │     
+│   │ Day of Week            ████████████          22%                         │                      │
+│   │ Holiday Proximity      ███████               15%                                   │
+│   └───────────────────────────────────────────────────────────────┘                       │
+│                                                                                                                                                │
 ├───────────────────────────────────────┬───────────────────────────────────────┤
 │                                       │                                       │
-│   🎯 ACCURACY BY ROUTE                │   ⏳ LEAD TIME vs NO-SHOW RATE        │
-│   ┌─────────────────────────┐         │   ┌─────────────────────────┐        │
-│   │ NBO→DAR    ████  94%    │         │   │ <7d   ████████████ 42%  │        │
-│   │ KGL→NBO    ████  96%    │         │   │ 7-14d ████████     28%  │        │
-│   │ DAR→KGL    ███   92%    │         │   │ 15-30d████         18%  │        │
-│   │ NBO→KGL    ████  97%    │         │   │ >30d  ███          12%  │        │
-│   └─────────────────────────┘         │   └─────────────────────────┘        │
-│                                       │                                       │
+│   🎯 ACCURACY BY ROUTE                │   ⏳ LEAD TIME vs NO-SHOW RATE                        │
+│   ┌─────────────────────────┐         │   ┌─────────────────────────┐                            │
+│   │ NBO→DAR    ████  94% │         │   │ <7d   ████████████ 42%  │           │
+│   │ KGL→NBO    ████  96%  │         │   │ 7-14d ████████     28%           │            │
+│   │ DAR→KGL    ███   92%     │         │   │ 15-30d████         18%                    │            │          
+│   │ NBO→KGL    ████  97%   │        │    │ >30d  ███          12%                      │             │                    
+│   └─────────────────────────┘         │   └─────────────────────────┘                             │
+│                                                                       │                                                             │
 └───────────────────────────────────────┴───────────────────────────────────────┘
-
+```
 ### SQL Query for No-Show Dashboard
 
 sql
@@ -215,9 +215,9 @@ WHERE prediction_date >= TRUNC(SYSDATE, 'MM');
 
 ### Access Control
 
-|Dashboard|Access Level|
-|---|---|
-|Executive Overview|Airline Management, Revenue Team|
-|Pricing & Revenue|Pricing Analysts, Revenue Managers|
-|No-Show Prediction|Operations, Data Science Team|
-|Audit Log|IT, Compliance|
+| Dashboard          | Access Level                       |
+| ------------------ | ---------------------------------- |
+| Executive Overview | Airline Management, Revenue Team   |
+| Pricing & Revenue  | Pricing Analysts, Revenue Managers |
+| No-Show Prediction | Operations, Data Science Team      |
+| Audit Log          | IT, Compliance                     |
