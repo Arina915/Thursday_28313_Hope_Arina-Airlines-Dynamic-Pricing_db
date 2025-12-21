@@ -1,6 +1,6 @@
 # Thursday_28313_Hope_Arina-Airlines-Dynamic-Pricing_db
 ----
-# Arina Airlines Dynamic Pricing and No-Show Prediction System
+## Arina Airlines Dynamic Pricing and No-Show Prediction System
 
 **Student Name:** Arinatwe Hope  
 **Student ID:** 28303
