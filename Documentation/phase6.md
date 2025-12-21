@@ -38,7 +38,7 @@ no-show predictions, overbooking management, loyalty programs, and booking cance
 This procedure remembers the old ticket price, saves the price change in a history table, updates future bookings with the new price, and prints a summary.
 It also handles cases where no previous price exists.. It automatically sets the best prices and predicts which customers might not show up (no-shows).
 **procedure**
-```. CREATE OR REPLACE PROCEDURE update_dynamic_pricing(
+```CREATE OR REPLACE PROCEDURE update_dynamic_pricing (
     p_flight_id IN VARCHAR2,
     p_fare_class IN VARCHAR2,
     p_new_price IN NUMBER,
@@ -48,46 +48,47 @@ It also handles cases where no previous price exists.. It automatically sets the
     p_load_factor IN NUMBER DEFAULT NULL
 )
 IS
-    v_old_price NUMBER;
-    v_adjustment_time TIMESTAMP := SYSTIMESTAMP;
+    v_old_price NUMBER(10,2);
+    v_adjusted_date TIMESTAMP(6) := SYSTIMESTAMP;
     v_future_bookings_updated NUMBER := 0;
     v_adjustment_id NUMBER;
     v_error_code VARCHAR2(100);
     v_error_message VARCHAR2(4000);
-    
+    v_price_difference NUMBER(10,2);
+
     -- Custom exceptions
     e_invalid_price EXCEPTION;
     e_invalid_input EXCEPTION;
     PRAGMA EXCEPTION_INIT(e_invalid_price, -20001);
     PRAGMA EXCEPTION_INIT(e_invalid_input, -20002);
-    
+
 BEGIN
     -- ================= INPUT VALIDATION =================
     DBMS_OUTPUT.PUT_LINE('Validating inputs...');
-    
+
     IF p_flight_id IS NULL OR LENGTH(TRIM(p_flight_id)) = 0 THEN
         RAISE e_invalid_input;
     END IF;
-    
+
     IF p_fare_class IS NULL OR LENGTH(TRIM(p_fare_class)) = 0 THEN
         RAISE e_invalid_input;
     END IF;
-    
+
     IF p_new_price IS NULL THEN
         RAISE e_invalid_price;
     END IF;
-    
+
     IF p_new_price < 0 THEN
         RAISE e_invalid_price;
     END IF;
-    
+
     IF p_adjustment_reason IS NULL OR LENGTH(TRIM(p_adjustment_reason)) = 0 THEN
         RAISE e_invalid_input;
     END IF;
-    
+
     -- ================= MAIN LOGIC =================
     DBMS_OUTPUT.PUT_LINE('Starting price adjustment...');
-    
+
     -- Get current average price from bookings
     BEGIN
         SELECT AVG(ticket_price) 
@@ -97,13 +98,13 @@ BEGIN
         AND fare_class = p_fare_class
         AND booking_status = 'CONFIRMED'
         AND ROWNUM = 1;
-        
+
         -- Handle NULL result
         IF v_old_price IS NULL THEN
             v_old_price := 0;
             DBMS_OUTPUT.PUT_LINE('No current bookings found. Using 0 as old price.');
         END IF;
-        
+
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             v_old_price := 0;
@@ -112,11 +113,14 @@ BEGIN
             v_old_price := 0;
             DBMS_OUTPUT.PUT_LINE('Error getting old price. Using 0 as default.');
     END;
-    
+
+    -- Calculate price difference
+    v_price_difference := p_new_price - v_old_price;
+
     -- Generate unique ID using timestamp (NO SEQUENCE)
     v_adjustment_id := TO_NUMBER(TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')) || 
                       TRUNC(DBMS_RANDOM.VALUE(100, 999));
-    
+
     -- Insert the price adjustment record
     BEGIN
         INSERT INTO price_adjustments (
@@ -125,9 +129,10 @@ BEGIN
             fare_class, 
             old_price, 
             new_price, 
+            price_difference,
             adjustment_reason, 
             adjusted_by,
-            adjustment_timestamp,
+            adjusted_date,
             no_show_prediction,
             load_factor
         )
@@ -137,29 +142,31 @@ BEGIN
             p_fare_class, 
             v_old_price, 
             p_new_price, 
+            v_price_difference,
             p_adjustment_reason, 
             p_adjusted_by,
-            v_adjustment_time,
+            v_adjusted_date,
             p_no_show_prediction,
             p_load_factor
         );
-        
+
         DBMS_OUTPUT.PUT_LINE('Price adjustment record inserted. ID: ' || v_adjustment_id);
-        
+
     EXCEPTION
         WHEN DUP_VAL_ON_INDEX THEN
             -- If duplicate, generate new ID
             v_adjustment_id := v_adjustment_id + 1;
-            
+
             INSERT INTO price_adjustments (
                 adjustment_id,
                 flight_id,
                 fare_class, 
                 old_price, 
                 new_price, 
+                price_difference,
                 adjustment_reason, 
                 adjusted_by,
-                adjustment_timestamp,
+                adjusted_date,
                 no_show_prediction,
                 load_factor
             )
@@ -169,16 +176,17 @@ BEGIN
                 p_fare_class, 
                 v_old_price, 
                 p_new_price, 
+                v_price_difference,
                 p_adjustment_reason, 
                 p_adjusted_by,
-                v_adjustment_time,
+                v_adjusted_date,
                 p_no_show_prediction,
                 p_load_factor
             );
-            
+
             DBMS_OUTPUT.PUT_LINE('Record inserted with new ID: ' || v_adjustment_id);
     END;
-    
+
     -- Update future bookings with the new price
     BEGIN
         UPDATE bookings 
@@ -187,28 +195,31 @@ BEGIN
         AND fare_class = p_fare_class
         AND booking_status IN ('CONFIRMED', 'PENDING')
         AND travel_date > SYSDATE;
-        
+
         v_future_bookings_updated := SQL%ROWCOUNT;
-        
+
         IF v_future_bookings_updated = 0 THEN
             DBMS_OUTPUT.PUT_LINE('No future bookings found to update.');
         ELSE
             DBMS_OUTPUT.PUT_LINE('Updated ' || v_future_bookings_updated || ' future booking(s).');
         END IF;
-        
+
     EXCEPTION
         WHEN OTHERS THEN
             DBMS_OUTPUT.PUT_LINE('Error updating bookings: ' || SQLERRM);
             RAISE;
     END;
-    
+
     COMMIT;
-    
+
     -- ================= SUCCESS MESSAGE =================
     DBMS_OUTPUT.PUT_LINE('Price adjustment completed successfully.');
     DBMS_OUTPUT.PUT_LINE('Adjustment ID: ' || v_adjustment_id);
+    DBMS_OUTPUT.PUT_LINE('Old Price: ' || v_old_price);
+    DBMS_OUTPUT.PUT_LINE('New Price: ' || p_new_price);
+    DBMS_OUTPUT.PUT_LINE('Price Difference: ' || v_price_difference);
     DBMS_OUTPUT.PUT_LINE('Future bookings updated: ' || v_future_bookings_updated);
-    
+
 EXCEPTION
     -- ================= CUSTOM EXCEPTIONS =================
     WHEN e_invalid_price THEN
@@ -216,31 +227,31 @@ EXCEPTION
         v_error_message := 'Price must be a positive number. Got: ' || p_new_price;
         DBMS_OUTPUT.PUT_LINE('ERROR: ' || v_error_message);
         ROLLBACK;
-        
+
     WHEN e_invalid_input THEN
         v_error_code := 'INVALID_INPUT';
         v_error_message := 'Flight ID, Fare Class, and Adjustment Reason cannot be empty';
         DBMS_OUTPUT.PUT_LINE('ERROR: ' || v_error_message);
         ROLLBACK;
-        
+
     -- ================= PREDEFINED EXCEPTIONS =================
     WHEN VALUE_ERROR THEN
         DBMS_OUTPUT.PUT_LINE('ERROR: Invalid value provided.');
         ROLLBACK;
-        
+
     WHEN INVALID_NUMBER THEN
         DBMS_OUTPUT.PUT_LINE('ERROR: Invalid number format for price.');
         ROLLBACK;
-        
+
     WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('ERROR: Required data not found.');
         ROLLBACK;
-        
+
     -- ================= TABLE/COLUMN NOT FOUND =================
     WHEN OTHERS THEN
         DBMS_OUTPUT.PUT_LINE('ERROR: ' || SQLCODE || ' - ' || SQLERRM);
         ROLLBACK;
-        
+
 END update_dynamic_pricing;
 /
 
