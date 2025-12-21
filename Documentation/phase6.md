@@ -257,69 +257,220 @@ END update_dynamic_pricing;
 
 ```
 **Testing**
-```-- Test 2: Update BUSINESS class
+```-- ============================================
+-- TEST SCRIPT FOR UPDATE_DYNAMIC_PRICING PROCEDURE
+-- ============================================
+
+-- Turn on output
+SET SERVEROUTPUT ON;
+
+-- Clean up and create test data
+DECLARE
+    v_count NUMBER;
 BEGIN
-    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 2: Business class update ===');
+    -- Clean up any existing test data
+    DELETE FROM price_adjustments WHERE flight_id LIKE 'TEST%';
+    DELETE FROM bookings WHERE flight_id LIKE 'TEST%';
+    COMMIT;
+    
+    -- Check if bookings table exists and insert test data
+    BEGIN
+        -- Insert test bookings
+        INSERT INTO bookings (booking_id, customer_id, flight_id, booking_date, travel_date, fare_class, ticket_price, payment_status, booking_status)
+        VALUES (1, 1001, 'TEST001', SYSTIMESTAMP, SYSDATE + 10, 'EC', 300.00, 'PAID', 'CONFIRMED');
+        
+        INSERT INTO bookings (booking_id, customer_id, flight_id, booking_date, travel_date, fare_class, ticket_price, payment_status, booking_status)
+        VALUES (2, 1002, 'TEST001', SYSTIMESTAMP, SYSDATE + 15, 'EC', 350.00, 'PAID', 'CONFIRMED');
+        
+        INSERT INTO bookings (booking_id, customer_id, flight_id, booking_date, travel_date, fare_class, ticket_price, payment_status, booking_status)
+        VALUES (3, 1003, 'TEST001', SYSTIMESTAMP, SYSDATE - 5, 'EC', 250.00, 'PAID', 'CONFIRMED'); -- Past booking
+        
+        INSERT INTO bookings (booking_id, customer_id, flight_id, booking_date, travel_date, fare_class, ticket_price, payment_status, booking_status)
+        VALUES (4, 1004, 'TEST001', SYSTIMESTAMP, SYSDATE + 20, 'BC', 800.00, 'PAID', 'CONFIRMED'); -- Different fare class
+        
+        INSERT INTO bookings (booking_id, customer_id, flight_id, booking_date, travel_date, fare_class, ticket_price, payment_status, booking_status)
+        VALUES (5, 1005, 'TEST001', SYSTIMESTAMP, SYSDATE + 25, 'EC', 320.00, 'PENDING', 'PENDING'); -- Pending booking
+        
+        COMMIT;
+        
+        DBMS_OUTPUT.PUT_LINE('Test data created successfully.');
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error creating test data: ' || SQLERRM);
+    END;
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
+END;
+/
+
+-- ============================================
+-- TEST CASE 1: Normal successful execution
+-- ============================================
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('TEST CASE 1: Normal successful execution');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
     update_dynamic_pricing(
-        p_flight_id => 'FL123',
-        p_fare_class => 'BUSINESS',
-        p_new_price => 699.99,
-        p_adjustment_reason => 'Premium service upgrade',
+        p_flight_id => 'TEST001',
+        p_fare_class => 'EC',
+        p_new_price => 400.00,
+        p_adjustment_reason => 'Increased demand for economy class',
+        p_adjusted_by => 'ADMIN',
+        p_no_show_prediction => 0.10,
+        p_load_factor => 0.85
+    );
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
+END;
+/
+
+-- Check the results
+SELECT * FROM price_adjustments WHERE flight_id = 'TEST001' ORDER BY adjusted_date DESC;
+SELECT booking_id, fare_class, ticket_price, travel_date, booking_status FROM bookings WHERE flight_id = 'TEST001' ORDER BY travel_date;
+
+-- ============================================
+-- TEST CASE 2: Different fare class (Business)
+-- ============================================
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('TEST CASE 2: Different fare class (Business)');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
+    update_dynamic_pricing(
+        p_flight_id => 'TEST001',
+        p_fare_class => 'BC',
+        p_new_price => 950.00,
+        p_adjustment_reason => 'Premium pricing for business class',
         p_adjusted_by => 'MANAGER'
     );
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
 END;
 /
 
--- Test 3: Flight with no bookings (should use 0 as old price)
+-- ============================================
+-- TEST CASE 3: Test with invalid price (should fail)
+-- ============================================
 BEGIN
-    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 3: Flight with no bookings ===');
+    DBMS_OUTPUT.PUT_LINE('TEST CASE 3: Test with invalid price (should fail)');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
     update_dynamic_pricing(
-        p_flight_id => 'FL999',
-        p_fare_class => 'ECONOMY',
-        p_new_price => 199.99,
-        p_adjustment_reason => 'New route promotion'
+        p_flight_id => 'TEST001',
+        p_fare_class => 'EC',
+        p_new_price => -100.00,
+        p_adjustment_reason => 'Invalid price test'
     );
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Expected error: ' || SQLERRM);
 END;
 /
 
--- Test 4: Test error handling - negative price
+-- ============================================
+-- TEST CASE 6: Test non-existent flight/class
+-- ============================================
 BEGIN
-    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 4: Negative price (should error) ===');
+    DBMS_OUTPUT.PUT_LINE('TEST CASE 6: Test non-existent flight/class');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
     update_dynamic_pricing(
-        p_flight_id => 'FL123',
-        p_fare_class => 'ECONOMY',
-        p_new_price => -100,
-        p_adjustment_reason => 'Test error'
+        p_flight_id => 'NONEXIST',
+        p_fare_class => 'EC',
+        p_new_price => 450.00,
+        p_adjustment_reason => 'Testing non-existent flight'
     );
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
 END;
 /
 
--- Test 5: Test error handling - empty flight ID
+-- ============================================
+-- TEST CASE 7: Test with only required parameters
+-- ============================================
 BEGIN
-    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 5: Empty flight ID (should error) ===');
+    DBMS_OUTPUT.PUT_LINE('TEST CASE 7: Test with only required parameters');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
     update_dynamic_pricing(
-        p_flight_id => '',
-        p_fare_class => 'ECONOMY',
-        p_new_price => 200,
-        p_adjustment_reason => 'Test'
+        p_flight_id => 'TEST002',
+        p_fare_class => 'EC',
+        p_new_price => 250.00,
+        p_adjustment_reason => 'New flight pricing'
     );
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
 END;
 /
 
--- Test 6: Test error handling - NULL price
+-- ============================================
+-- TEST CASE 8: Test price reduction
+-- ============================================
 BEGIN
-    DBMS_OUTPUT.PUT_LINE(CHR(10) || '=== TEST 6: NULL price (should error) ===');
+    DBMS_OUTPUT.PUT_LINE('TEST CASE 8: Test price reduction');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
     update_dynamic_pricing(
-        p_flight_id => 'FL123',
-        p_fare_class => 'ECONOMY',
-        p_new_price => NULL,
-        p_adjustment_reason => 'Test'
+        p_flight_id => 'TEST001',
+        p_fare_class => 'EC',
+        p_new_price => 350.00,
+        p_adjustment_reason => 'Reducing price due to low bookings',
+        p_adjusted_by => 'SYSTEM',
+        p_no_show_prediction => 0.25,
+        p_load_factor => 0.45
     );
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
+END;
+/
+
+-- ============================================
+-- FINAL RESULTS CHECK
+-- ============================================
+DECLARE
+    v_total_adjustments NUMBER;
+    v_total_updated_bookings NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('FINAL RESULTS CHECK');
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    
+    -- Check all price adjustments
+    DBMS_OUTPUT.PUT_LINE('All price adjustments:');
+    FOR rec IN (SELECT adjustment_id, flight_id, fare_class, old_price, new_price, price_difference, 
+                       adjustment_reason, adjusted_by, adjusted_date
+                FROM price_adjustments 
+                ORDER BY adjusted_date DESC) 
+    LOOP
+        DBMS_OUTPUT.PUT_LINE('ID: ' || rec.adjustment_id || ', Flight: ' || rec.flight_id || 
+                            ', Class: ' || rec.fare_class || ', Old: ' || rec.old_price || 
+                            ', New: ' || rec.new_price || ', Diff: ' || rec.price_difference);
+    END LOOP;
+    
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    DBMS_OUTPUT.PUT_LINE('Updated bookings for TEST001:');
+    FOR rec IN (SELECT booking_id, fare_class, ticket_price, travel_date, booking_status
+                FROM bookings 
+                WHERE flight_id = 'TEST001' 
+                ORDER BY fare_class, travel_date) 
+    LOOP
+        DBMS_OUTPUT.PUT_LINE('Booking: ' || rec.booking_id || ', Class: ' || rec.fare_class || 
+                            ', Price: ' || rec.ticket_price || ', Date: ' || rec.travel_date || 
+                            ', Status: ' || rec.booking_status);
+    END LOOP;
+    
+    -- Summary statistics
+    DBMS_OUTPUT.PUT_LINE('============================================');
+    DBMS_OUTPUT.PUT_LINE('SUMMARY STATISTICS:');
+    
+    SELECT COUNT(*) INTO v_total_adjustments FROM price_adjustments;
+    DBMS_OUTPUT.PUT_LINE('Total price adjustments: ' || v_total_adjustments);
+    
+    SELECT COUNT(*) INTO v_total_updated_bookings FROM bookings WHERE ticket_price IN (400, 950, 350);
+    DBMS_OUTPUT.PUT_LINE('Total bookings updated to new prices: ' || v_total_updated_bookings);
 END;
 /
 ```
-
-![1111111](https://github.com/user-attachments/assets/277d0fbb-38cd-4011-bd9f-e63002112e62)
+![proce](https://github.com/user-attachments/assets/289fa849-a518-4ffa-902d-3592a399725d)
 
 
 #### Package 2: booking_manager
