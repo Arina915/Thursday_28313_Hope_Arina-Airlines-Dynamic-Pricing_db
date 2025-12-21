@@ -87,10 +87,10 @@ Monitor dynamic pricing adjustments, load factors, and revenue performance acros
 text
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                   PRICING & REVENUE MONITORING DASHBOARD                                          │
-│                         Last Updated: 2025-12-07 10:15                                                                  │
+│                   PRICING & REVENUE MONITORING DASHBOARD                    │
+│                         Last Updated: 2025-12-07 10:15                       │
 ├─────────────────┬─────────────────┬─────────────────┬─────────────────────────┤
-│                               │                 │                 │                         │
+│                               │                 │                 │           │
 │  💺 AVG LOAD    │  🎫 AVG PRICE   │  📉 MAX PRICE   │   📈 REVENUE            │
 │  FACTOR         │  ADJUSTMENT     │  DROP           │   LIFT                  │
 │     78%         │     -5.2%       │      -22%       │   +8.3%                 │
